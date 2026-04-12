@@ -134,9 +134,9 @@ theorem ym_satisfies_doeblin (β : ℝ) (hβ : 0 ≤ β)
   · -- Minorization: K(V,A) ≥ c · μ(A)
     intro V A hA
     rw [hK V A hA]
-    -- q(V,W)/Z(V) ≥ c because q ≥ c and Z ≤ 1 (from q ≤ 1 + μ prob).
-    -- So ∫_A q/Z dμ ≥ ∫_A c dμ = c · μ(A).toReal.
-    -- Uses: setIntegral_mono + setIntegral_const from Mathlib.
-    sorry -- integration plumbing: setIntegral_mono for q/Z ≥ c
+    -- q/Z ≥ c because q ≥ c and Z = ∫q ≤ ∫1 = 1 (from hq_le_one + μ prob).
+    -- setIntegral_const: ∫_A c = c · μ.real(A)
+    -- setIntegral_mono: if c ≤ q/Z pointwise then ∫_A c ≤ ∫_A q/Z
+    sorry
 
 end
