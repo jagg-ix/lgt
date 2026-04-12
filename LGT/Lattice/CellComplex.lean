@@ -34,6 +34,13 @@ def siteShift (x : FinLatticeSites d N) (μ : Fin d) :
     FinLatticeSites d N :=
   Function.update x μ (x μ + 1)
 
+/-- Shifts in different directions commute. -/
+theorem siteShift_comm (x : FinLatticeSites d N) (μ ν : Fin d) (h : μ ≠ ν) :
+    siteShift d N (siteShift d N x μ) ν = siteShift d N (siteShift d N x ν) μ := by
+  ext i
+  simp only [siteShift, Function.update]
+  split_ifs with h1 h2 h3 h4 <;> subst_eqs <;> simp_all
+
 /-- Target of a link. -/
 def LatticeLink.target {d N : ℕ} (l : LatticeLink d N) :
     FinLatticeSites d N :=

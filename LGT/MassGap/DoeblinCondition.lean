@@ -68,13 +68,21 @@ theorem doeblin_one_step_contraction {X : Type*} [MeasurableSpace X]
   have hμA_nn : 0 ≤ (μ A).toReal := ENNReal.toReal_nonneg
   -- π(Aᶜ) = 1 - π(A) and μ(Aᶜ) = 1 - μ(A)
   -- (for probability measures on complementary sets)
-  -- The proof uses: π(A) + π(Aᶜ) = 1, μ(A) + μ(Aᶜ) = 1
-  -- (probability measure on complementary sets)
-  -- Then from μ(A) ≥ ε·π(A): lower bound μ(A) - π(A) ≥ -(1-ε)
-  -- From μ(Aᶜ) ≥ ε·π(Aᶜ) = ε(1-π(A)): upper bound μ(A) - π(A) ≤ 1-ε
-  -- The measure-theoretic plumbing (complement identity for IsProbabilityMeasure,
-  -- ENNReal.toReal arithmetic) is straightforward but verbose.
-  sorry
+  -- Use prob_compl_eq_one_sub: π(Aᶜ) = 1 - π(A) in ENNReal
+  have hπc_ennreal := prob_compl_eq_one_sub hA (μ := π)
+  have hμc_ennreal := prob_compl_eq_one_sub hA (μ := μ)
+  -- Convert to real: (1 - π(A)).toReal = 1 - π(A).toReal
+  have hπA_le_one : π A ≤ 1 := prob_le_one
+  have hμA_le_one : μ A ≤ 1 := prob_le_one
+  have hπ_compl : (π Aᶜ).toReal = 1 - (π A).toReal := by
+    rw [hπc_ennreal]
+    exact ENNReal.toReal_sub_of_le hπA_le_one ENNReal.one_ne_top
+  have hμ_compl : (μ Aᶜ).toReal = 1 - (μ A).toReal := by
+    rw [hμc_ennreal]
+    exact ENNReal.toReal_sub_of_le hμA_le_one ENNReal.one_ne_top
+  have hπA_le : (π A).toReal ≤ 1 := by linarith [hπ_compl, ENNReal.toReal_nonneg (a := π Aᶜ)]
+  rw [hπ_compl] at hμAc; rw [hμ_compl] at hμAc
+  rw [abs_le]; constructor <;> nlinarith
 
 /-! ## Exponential mixing (axiomatized) -/
 

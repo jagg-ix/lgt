@@ -68,6 +68,7 @@ theorem holonomy_gauge_covariant (g : GaugeTransform G d N)
     g p.site * plaquetteHolonomy U p * (g p.site)⁻¹ := by
   simp only [plaquetteHolonomy, gaugeTransformConnection, LatticePlaquette.boundaryLinks,
     LatticeLink.target]
-  -- Requires: siteShift commutes in different directions (shifts are independent)
-  -- Then the intermediate g terms telescope, leaving g(x) · U_p · g(x)⁻¹
-  sorry
+  -- The intermediate g terms telescope using siteShift_comm
+  have hcomm := siteShift_comm d N p.site p.dir1 p.dir2 (ne_of_lt p.h_lt)
+  rw [hcomm]
+  group
