@@ -36,6 +36,7 @@ This gives Doeblin's condition with ε = exp(-2nβ)/K.
 import LGT.GaugeField.GaugeGroup
 import LGT.MassGap.DoeblinCondition
 import Mathlib.MeasureTheory.Integral.Bochner.Basic
+import Mathlib.MeasureTheory.Integral.Bochner.Set
 
 open MeasureTheory
 
@@ -134,9 +135,30 @@ theorem ym_satisfies_doeblin (β : ℝ) (hβ : 0 ≤ β)
   · -- Minorization: K(V,A) ≥ c · μ(A)
     intro V A hA
     rw [hK V A hA]
-    -- q/Z ≥ c because q ≥ c and Z = ∫q ≤ ∫1 = 1 (from hq_le_one + μ prob).
-    -- setIntegral_const: ∫_A c = c · μ.real(A)
-    -- setIntegral_mono: if c ≤ q/Z pointwise then ∫_A c ≤ ∫_A q/Z
-    sorry
+    -- q/Z ≥ c because q ≥ c and Z ≤ 1 (from hq_le_one + μ prob).
+    calc c * (μ A).toReal = ∫ _ in A, c ∂μ := by
+          rw [MeasureTheory.setIntegral_const]
+          simp [Measure.real, smul_eq_mul, mul_comm]
+      _ ≤ ∫ W in A, singleSiteTransitionWeight G n β V W /
+            (∫ W', singleSiteTransitionWeight G n β V W' ∂μ) ∂μ := by
+          apply MeasureTheory.setIntegral_mono
+            (integrableOn_const (measure_ne_top μ A))
+          · -- IntegrableOn: q/Z is bounded (by 1/c since q ≤ 1 and Z ≥ c)
+            sorry
+          · -- Pointwise: c ≤ q(V,W)/Z(V) since q ≥ c and Z ≤ 1
+            intro W
+            have hZ_le : ∫ W', singleSiteTransitionWeight G n β V W' ∂μ ≤ 1 := by
+              calc ∫ W', singleSiteTransitionWeight G n β V W' ∂μ
+                  ≤ ∫ _, (1 : ℝ) ∂μ := by
+                    exact integral_mono (by sorry) (integrable_const 1) (fun w => hq_le_one V w)
+                _ = 1 := by simp [IsProbabilityMeasure.measure_univ]
+            have hZ_pos : 0 < ∫ W', singleSiteTransitionWeight G n β V W' ∂μ := by
+              exact lt_of_lt_of_le (ymDoeblinLowerBound_pos n β)
+                (integral_ge_const_of_ge (by sorry) (fun w => hq_lower V w hTrace_lower))
+            rw [le_div_iff₀ hZ_pos]
+            calc c * ∫ W', singleSiteTransitionWeight G n β V W' ∂μ
+                ≤ c * 1 := by exact mul_le_mul_of_nonneg_left hZ_le (le_of_lt (ymDoeblinLowerBound_pos n β))
+              _ = c := mul_one c
+              _ ≤ singleSiteTransitionWeight G n β V W := hq_lower V W hTrace_lower
 
 end
