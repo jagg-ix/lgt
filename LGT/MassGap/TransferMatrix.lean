@@ -114,12 +114,22 @@ theorem ym_satisfies_doeblin (β : ℝ) (hβ : 0 ≤ β)
         singleSiteTransitionWeight G n β V W /
         (∫ W', singleSiteTransitionWeight G n β V W' ∂μ) ∂μ) :
     ∃ (hD : DoeblinCondition K μ), 0 < hD.ε := by
-  -- The density p(V,W) = q(V,W) / Z(V) satisfies:
-  -- p(V,W) ≥ exp(-2nβ) / Z(V)
-  -- And Z(V) = ∫ q(V,W') dμ(W') ≤ exp(0) · μ(G) = 1 (since q ≤ 1 when β(n-ReTr) ≥ 0)
-  -- Wait: Z(V) is not necessarily ≤ 1. But Z(V) ≤ exp(0) · 1 = 1 when β ≥ 0 and
-  -- n - Re Tr ≥ 0, so q ≤ 1. But we also need Z(V) ≥ exp(-2nβ) > 0.
-  -- The Doeblin constant is ε = exp(-2nβ) / sup_V Z(V).
+  -- The Doeblin constant is ε = exp(-2nβ).
+  -- Proof: the density p(V,W) = q(V,W)/Z(V) satisfies p ≥ exp(-2nβ)/Z(V).
+  -- Since q(V,W) ≤ 1 (when β ≥ 0, n - ReTr ≥ 0), we have Z(V) ≤ 1.
+  -- Therefore p(V,W) ≥ exp(-2nβ), giving K(V,A) ≥ exp(-2nβ) · μ(A).
+  --
+  -- Step 1: The weight upper bound q(V,W) ≤ 1 (since β ≥ 0 and n - ReTr ≥ 0)
+  have hq_le_one : ∀ V W, singleSiteTransitionWeight G n β V W ≤ 1 := by
+    intro V W
+    unfold singleSiteTransitionWeight
+    exact Real.exp_le_one_iff.mpr (by nlinarith [hTrace_upper (W * V⁻¹)])
+  -- Step 2: The weight lower bound q(V,W) ≥ exp(-2nβ) (already proved)
+  have hq_lower := singleSiteTransitionWeight_lower_bound G n β hβ
+  -- Step 3: Z(V) = ∫ q(V,W) dμ(W) ≤ ∫ 1 dμ = 1
+  -- Step 4: p(V,W) = q(V,W)/Z(V) ≥ exp(-2nβ)/1 = exp(-2nβ)
+  -- Step 5: K(V,A) = ∫_A p dμ ≥ exp(-2nβ) · μ(A)
+  -- Steps 3-5 require Haar measure integration (integral_mono etc.)
   sorry
 
 end
