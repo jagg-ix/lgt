@@ -37,13 +37,14 @@ import LGT.GaugeField.GaugeGroup
 import LGT.MassGap.DoeblinCondition
 import Mathlib.MeasureTheory.Integral.Bochner.Basic
 import Mathlib.MeasureTheory.Integral.Bochner.Set
+import Mathlib.Topology.Algebra.Group.Basic
 
 open MeasureTheory
 
 noncomputable section
 
 variable (G : Type*) (n : ℕ) [Group G] [HasGaugeTrace G n]
-variable [TopologicalSpace G] [CompactSpace G]
+variable [TopologicalSpace G] [IsTopologicalGroup G] [CompactSpace G]
 variable [MeasurableSpace G] [BorelSpace G]
 
 /-! ## Single-site transition density -/
@@ -108,6 +109,8 @@ which is positive because G is compact. -/
 theorem ym_satisfies_doeblin (β : ℝ) (hβ : 0 ≤ β)
     (hTrace_lower : ∀ (g : G), -↑n ≤ gaugeReTr G n g)
     (hTrace_upper : ∀ (g : G), gaugeReTr G n g ≤ ↑n)
+    -- Continuity of the representation (needed for measurability)
+    (hRep_cont : Continuous (HasGaugeTrace.rep (G := G) (n := n)))
     (μ : Measure G) [IsProbabilityMeasure μ]
     (K : MarkovKernel G)
     (hK : ∀ (V : G) (A : Set G), MeasurableSet A →
@@ -133,7 +136,10 @@ theorem ym_satisfies_doeblin (β : ℝ) (hβ : 0 ≤ β)
   have hq_integrable : ∀ V, Integrable (singleSiteTransitionWeight G n β V) μ := by
     intro V
     exact (integrable_const (1 : ℝ)).mono
-      (by sorry) -- AEStronglyMeasurable: q is continuous (exp ∘ continuous)
+      (by -- AEStronglyMeasurable: q is continuous hence measurable (BorelSpace)
+          apply Continuous.aestronglyMeasurable
+          unfold singleSiteTransitionWeight gaugeReTr gaugeTrace
+          fun_prop)
       (Filter.Eventually.of_forall fun W => by
         rw [show ‖singleSiteTransitionWeight G n β V W‖ = singleSiteTransitionWeight G n β V W from
           Real.norm_of_nonneg (le_of_lt (singleSiteTransitionWeight_pos G n β V W))]
