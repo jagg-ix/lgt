@@ -127,6 +127,18 @@ theorem ym_satisfies_doeblin (β : ℝ) (hβ : 0 ≤ β)
     exact Real.exp_le_one_iff.mpr (by nlinarith [hTrace_upper (W * V⁻¹)])
   -- Step 2: The weight lower bound q(V,W) ≥ exp(-2nβ) (already proved)
   have hq_lower := singleSiteTransitionWeight_lower_bound G n β hβ
+  -- Step 3: Integrability of q (bounded by 1, on probability measure)
+  -- Needs AEStronglyMeasurable which requires continuity of q.
+  -- For a compact topological group with BorelSpace, continuous → measurable.
+  have hq_integrable : ∀ V, Integrable (singleSiteTransitionWeight G n β V) μ := by
+    intro V
+    exact (integrable_const (1 : ℝ)).mono
+      (by sorry) -- AEStronglyMeasurable: q is continuous (exp ∘ continuous)
+      (Filter.Eventually.of_forall fun W => by
+        rw [show ‖singleSiteTransitionWeight G n β V W‖ = singleSiteTransitionWeight G n β V W from
+          Real.norm_of_nonneg (le_of_lt (singleSiteTransitionWeight_pos G n β V W))]
+        calc singleSiteTransitionWeight G n β V W ≤ 1 := hq_le_one V W
+          _ = ‖(1 : ℝ)‖ := by simp)
   -- Construct the Doeblin condition with ε = exp(-2nβ)
   set c := ymDoeblinLowerBound n β with hc_def
   refine ⟨⟨c, ymDoeblinLowerBound_pos n β, ?_, ?_⟩, ymDoeblinLowerBound_pos n β⟩
@@ -144,17 +156,18 @@ theorem ym_satisfies_doeblin (β : ℝ) (hβ : 0 ≤ β)
           apply MeasureTheory.setIntegral_mono
             (integrableOn_const (measure_ne_top μ A))
           · -- IntegrableOn: q/Z is bounded, hence integrable on probability measure
-            sorry -- needs: AEStronglyMeasurable of q/Z (measurability on compact G)
+            -- q/Z is integrable: q is integrable (bounded), Z is a positive constant
+            exact (hq_integrable V).div_const _  |>.integrableOn
           · -- Pointwise: c ≤ q(V,W)/Z(V) since q ≥ c and Z ≤ 1
             intro W
             have hZ_le : ∫ W', singleSiteTransitionWeight G n β V W' ∂μ ≤ 1 := by
               calc ∫ W', singleSiteTransitionWeight G n β V W' ∂μ
                   ≤ ∫ _, (1 : ℝ) ∂μ := by
-                    exact integral_mono (by sorry) (integrable_const 1) (fun w => hq_le_one V w)
+                    exact integral_mono (hq_integrable V) (integrable_const 1) (fun w => hq_le_one V w)
                 _ = 1 := by simp [IsProbabilityMeasure.measure_univ]
             have hZ_pos : 0 < ∫ W', singleSiteTransitionWeight G n β V W' ∂μ := by
               exact lt_of_lt_of_le (ymDoeblinLowerBound_pos n β)
-                (integral_ge_const_of_ge (by sorry) (fun w => hq_lower V w hTrace_lower))
+                (integral_ge_const_of_ge (hq_integrable V) (fun w => hq_lower V w hTrace_lower))
             rw [le_div_iff₀ hZ_pos]
             calc c * ∫ W', singleSiteTransitionWeight G n β V W' ∂μ
                 ≤ c * 1 := by exact mul_le_mul_of_nonneg_left hZ_le (le_of_lt (ymDoeblinLowerBound_pos n β))
