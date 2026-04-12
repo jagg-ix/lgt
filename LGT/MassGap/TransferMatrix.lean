@@ -126,10 +126,17 @@ theorem ym_satisfies_doeblin (β : ℝ) (hβ : 0 ≤ β)
     exact Real.exp_le_one_iff.mpr (by nlinarith [hTrace_upper (W * V⁻¹)])
   -- Step 2: The weight lower bound q(V,W) ≥ exp(-2nβ) (already proved)
   have hq_lower := singleSiteTransitionWeight_lower_bound G n β hβ
-  -- Step 3: Z(V) = ∫ q(V,W) dμ(W) ≤ ∫ 1 dμ = 1
-  -- Step 4: p(V,W) = q(V,W)/Z(V) ≥ exp(-2nβ)/1 = exp(-2nβ)
-  -- Step 5: K(V,A) = ∫_A p dμ ≥ exp(-2nβ) · μ(A)
-  -- Steps 3-5 require Haar measure integration (integral_mono etc.)
-  sorry
+  -- Construct the Doeblin condition with ε = exp(-2nβ)
+  set c := ymDoeblinLowerBound n β with hc_def
+  refine ⟨⟨c, ymDoeblinLowerBound_pos n β, ?_, ?_⟩, ymDoeblinLowerBound_pos n β⟩
+  · -- ε ≤ 1: exp(-2nβ) ≤ 1 since 2nβ ≥ 0
+    exact Real.exp_le_one_iff.mpr (by nlinarith)
+  · -- Minorization: K(V,A) ≥ c · μ(A)
+    intro V A hA
+    rw [hK V A hA]
+    -- q(V,W)/Z(V) ≥ c because q ≥ c and Z ≤ 1 (from q ≤ 1 + μ prob).
+    -- So ∫_A q/Z dμ ≥ ∫_A c dμ = c · μ(A).toReal.
+    -- Uses: setIntegral_mono + setIntegral_const from Mathlib.
+    sorry -- integration plumbing: setIntegral_mono for q/Z ≥ c
 
 end
