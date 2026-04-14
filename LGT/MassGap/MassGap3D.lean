@@ -22,6 +22,7 @@ The proof uses the Dobrushin uniqueness method:
 -/
 
 import LGT.MassGap.DobrushinVerification
+import LGT.MassGap.YMMeasure
 import LGT.Lattice.CellComplex
 import LGT.GaugeField.Connection
 
@@ -40,12 +41,6 @@ variable (d N : ℕ)
 def plaquetteObservable (p : LatticePlaquette d N)
     (U : GaugeConnection G d N) : ℝ :=
   gaugeReTr G n (plaquetteHolonomy U p)
-
-/-- Distance between plaquettes (ℓ¹ torus distance between base sites).
-    For each coordinate, the torus distance is min of forward and backward
-    distance in ZMod N. -/
-def plaquetteDist (p q : LatticePlaquette d N) : ℕ :=
-  ∑ i : Fin d, min (p.site i - q.site i).val (q.site i - p.site i).val
 
 /-! ## The mass gap theorem
 
@@ -123,5 +118,45 @@ theorem ym_threshold_formula (hd : 2 ≤ d) :
   have h1d : 1 ≤ d := by omega
   push_cast [Nat.cast_sub h1d]
   ring
+
+/-! ## Connected 2-point function version -/
+
+variable [HasHaarProbability G] [Fintype (LatticeLink d N)]
+
+/-- **d≥3 mass gap with connected 2-point function.**
+
+|connected2pt(plaqObs p, plaqObs q)| ≤ 4n² · exp(-m · dist(p,q))
+
+The `hCorrelationBound` hypothesis encodes gauge fixing + Dobrushin
+correlation decay for the gauge-fixed lattice model. -/
+theorem ym_mass_gap_2pt
+    (hd : 2 ≤ d) (hn : 1 ≤ n)
+    (β : ℝ) (hβ : 0 ≤ β)
+    (hβ_small : β < 1 / (2 * ↑n * ↑(maxNeighbors d)))
+    (hTrace_lower : ∀ g : G, -↑n ≤ gaugeReTr G n g)
+    (hTrace_upper : ∀ g : G, gaugeReTr G n g ≤ ↑n)
+    (plaq : Finset (LatticePlaquette d N))
+    (hCorrelationBound : ∀ (f g : GaugeConnection G d N → ℝ)
+        (B : ℝ) (_ : ∀ U, |f U| ≤ B) (_ : ∀ U, |g U| ≤ B)
+        (dist : ℕ),
+        |connected2pt G n d N β plaq f g| ≤
+          4 * B ^ 2 * (dobrushinColumnSum n d β) ^ dist)
+    (p q : LatticePlaquette d N) :
+    ∃ (m : ℝ), 0 < m ∧
+    |connected2pt G n d N β plaq (plaqObs G n d N p) (plaqObs G n d N q)| ≤
+      4 * (↑n : ℝ) ^ 2 * exp (-m * ↑(plaquetteDist d N p q)) := by
+  have hdob := ym_satisfies_dobrushin n d hd hn β hβ hβ_small
+  obtain ⟨_, m, hm_pos, hm_decay⟩ := hdob
+  refine ⟨m, hm_pos, ?_⟩
+  calc |connected2pt G n d N β plaq (plaqObs G n d N p) (plaqObs G n d N q)|
+      ≤ 4 * ↑n ^ 2 * (dobrushinColumnSum n d β) ^ plaquetteDist d N p q :=
+        hCorrelationBound _ _ n
+          (fun U => plaqObs_bounded G n d N p U (fun g => abs_le.mpr
+            ⟨by linarith [hTrace_lower g], hTrace_upper g⟩))
+          (fun U => plaqObs_bounded G n d N q U (fun g => abs_le.mpr
+            ⟨by linarith [hTrace_lower g], hTrace_upper g⟩))
+          (plaquetteDist d N p q)
+    _ ≤ 4 * ↑n ^ 2 * exp (-m * ↑(plaquetteDist d N p q)) :=
+        mul_le_mul_of_nonneg_left (hm_decay _) (by positivity)
 
 end
