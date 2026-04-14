@@ -194,9 +194,28 @@ theorem ym_satisfies_dobrushin (d : ℕ) (hd : 2 ≤ d) (hn : 1 ≤ n)
     have hc_nn : 0 ≤ c := by
       simp only [c, dobrushinColumnSum]
       exact mul_nonneg (Nat.cast_nonneg' _) (influenceBound_nonneg n β hβ)
-    -- Use m = 1 as a simple positive decay rate; the exponential bound is sorry'd
-    refine ⟨1, one_pos, ?_⟩
-    intro k
-    sorry
+    -- Use m = 1. For 0 ≤ c < 1: c^k ≤ c ≤ 1 and exp(-k) > 0,
+    -- but we actually just need c^k ≤ exp(-m*k) for SOME m > 0.
+    -- Since c < 1, c ≤ exp(-m) for m = -log(max c (1/2)) > 0.
+    -- Simplest: m = -log(1/2) = log 2 works since c < 1 ≤ ... no.
+    -- Actually simplest: c^k is eventually tiny, exp(-mk) is also tiny.
+    -- Let's just use the fact that for 0 ≤ c < 1, c ≤ exp(log c)
+    -- and log c < 0, so c^k = exp(k log c) = exp(-(-log c) k).
+    -- When c = 0, log c = 0 in Mathlib, so we handle separately.
+    by_cases hc_pos : 0 < c
+    · -- 0 < c < 1: use m = -log(c) > 0
+      refine ⟨-Real.log c, ?_, fun k => ?_⟩
+      · rwa [neg_pos, Real.log_neg_iff hc_pos]
+      · rw [show -(- Real.log c) * ↑k = ↑k * Real.log c by ring,
+             Real.exp_nat_mul, Real.exp_log hc_pos]
+    · -- c = 0
+      have hc_zero : c = 0 := le_antisymm (not_lt.mp hc_pos) hc_nn
+      refine ⟨1, one_pos, fun k => ?_⟩
+      rw [hc_zero]
+      cases k with
+      | zero => simp
+      | succ k =>
+        simp [zero_pow (Nat.succ_ne_zero k)]
+        exact (Real.exp_pos _).le
 
 end
