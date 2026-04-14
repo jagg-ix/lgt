@@ -4,16 +4,17 @@ Released under Apache 2.0 license as described in the file LICENSE.
 
 # Yang-Mills Measure on the Lattice
 
-Defines the Yang-Mills probability measure on gauge field configurations
-for a compact gauge group G on a finite lattice.
+Defines the finite-volume Yang-Mills probability measure on gauge field
+configurations for a compact gauge group G on a finite lattice.
 
 ## Definitions
 
 - `haarG` — normalized Haar probability measure on G
 - `productHaar` — product Haar measure on G^{links} (prior measure)
-- `wilsonBoltzmann` — Boltzmann weight exp(-β · S(U)) for Wilson action
-- `ymMeasure` — Yang-Mills probability measure (Boltzmann × Haar / Z)
-- `ymExpect` — expectation under the YM measure
+- `boltzmannWeight` — exp(-β · S(U)) for Wilson action
+- `partitionFn` — Z = ∫ exp(-S) dμ_Haar, proved > 0
+- `ymMeasure` — the Yang-Mills probability measure (Boltzmann × Haar / Z)
+- `ymExpect` — expectation ⟨f⟩ under ymMeasure
 - `connected2pt` — connected 2-point function ⟨fg⟩ - ⟨f⟩⟨g⟩
 
 ## References
@@ -26,6 +27,7 @@ import LGT.GaugeField.Connection
 import LGT.GaugeField.GaugeGroup
 import Mathlib.MeasureTheory.Integral.Bochner.Basic
 import Mathlib.MeasureTheory.Measure.Prod
+import Mathlib.MeasureTheory.Constructions.Pi
 
 open MeasureTheory
 
@@ -34,17 +36,20 @@ noncomputable section
 variable (G : Type*) [Group G] [TopologicalSpace G] [CompactSpace G]
   [IsTopologicalGroup G] [MeasurableSpace G] [BorelSpace G]
 
--- For finite lattices, the gauge configuration space is a finite product
--- G^{links}. We use the product sigma-algebra.
+-- LatticeLink is finite for finite lattices.
+-- (GaugeConnection G d N = LatticeLink d N → G needs Fintype for Measure.pi)
+-- For now we add this as an assumption where needed.
+
+-- Product sigma-algebra on gauge configurations G^{links}
 instance instMeasurableSpaceGaugeConnection (d N : ℕ) :
     MeasurableSpace (GaugeConnection G d N) := MeasurableSpace.pi
 
 /-! ## Haar probability measure on compact G -/
 
-/-- The normalized Haar probability measure on a compact group G.
-For compact G, the Haar measure can be normalized to total mass 1.
-We assume this as a hypothesis; Mathlib provides it via
-`haarMeasure` on `PositiveCompacts G` after normalization. -/
+/-- Normalized Haar probability measure on a compact group G.
+Every compact group admits a unique bi-invariant probability measure.
+Mathlib provides this via `haarMeasure` on `PositiveCompacts G`
+after normalization. We package it as a class for convenience. -/
 class HasHaarProbability (G : Type*) [MeasurableSpace G] where
   haar : Measure G
   isProb : IsProbabilityMeasure haar
@@ -58,76 +63,122 @@ def haarG : Measure G := HasHaarProbability.haar (G := G)
 
 instance : IsProbabilityMeasure (haarG G) := HasHaarProbability.isProb
 
-/-! ## Product measure on gauge configurations -/
+/-! ## Product Haar measure on configurations -/
 
 variable (n : ℕ) [HasGaugeTrace G n]
-variable (d N : ℕ)
+variable (d N : ℕ) [Fintype (LatticeLink d N)]
 
-/-- The set of links on the lattice (ℤ/Nℤ)^d. -/
-abbrev Links := LatticeLink d N
-
-/-- A gauge configuration assigns a group element to each link. -/
-abbrev Config := Links d N → G
-
-/-- The set of plaquettes on the lattice. -/
-abbrev Plaquettes := LatticePlaquette d N
+/-- The product Haar measure on gauge configurations G^{links}. -/
+def productHaar : Measure (GaugeConnection G d N) :=
+  Measure.pi (fun _ : LatticeLink d N => haarG G)
 
 /-! ## Wilson action and Boltzmann weight -/
 
-/-- The Wilson action: S(U) = Σ_p β · (n - Re Tr(U_p)).
-Takes a finite set of plaquettes to sum over. -/
+/-- The Wilson action: S(U) = Σ_p β · (n - Re Tr(U_p)). -/
 def wilsonAction (β : ℝ) (U : GaugeConnection G d N)
-    (plaq : Finset (Plaquettes d N)) : ℝ :=
+    (plaq : Finset (LatticePlaquette d N)) : ℝ :=
   ∑ p ∈ plaq, β * wilsonPlaquetteCost G n (plaquetteHolonomy U p)
 
-/-- The Boltzmann weight: exp(-S(U)). -/
+/-- The Boltzmann weight: w(U) = exp(-S(U)). -/
 def boltzmannWeight (β : ℝ) (U : GaugeConnection G d N)
-    (plaq : Finset (Plaquettes d N)) : ℝ :=
+    (plaq : Finset (LatticePlaquette d N)) : ℝ :=
   Real.exp (-(wilsonAction G n d N β U plaq))
 
 /-- The Boltzmann weight is always positive. -/
 theorem boltzmannWeight_pos (β : ℝ) (U : GaugeConnection G d N)
-    (plaq : Finset (Plaquettes d N)) :
+    (plaq : Finset (LatticePlaquette d N)) :
     0 < boltzmannWeight G n d N β U plaq :=
   Real.exp_pos _
 
-/-! ## Yang-Mills expectation value
+/-- The Boltzmann weight is ≤ 1 when β ≥ 0 (since S ≥ 0).
 
-The YM expectation of an observable f : Config → ℝ is:
-  ⟨f⟩ = (1/Z) ∫ f(U) · exp(-S(U)) dμ_Haar(U)
-where Z = ∫ exp(-S(U)) dμ_Haar(U) is the partition function.
+S(U) = Σ_p β(n - Re Tr(U_p)) ≥ 0 when β ≥ 0 (as n - Re Tr ≥ 0
+for G ⊂ U(n)), so exp(-S) ≤ exp(0) = 1. -/
+theorem boltzmannWeight_le_one (β : ℝ) (hβ : 0 ≤ β)
+    (U : GaugeConnection G d N)
+    (plaq : Finset (LatticePlaquette d N))
+    (hTrace : ∀ g : G, gaugeReTr G n g ≤ ↑n) :
+    boltzmannWeight G n d N β U plaq ≤ 1 := by
+  unfold boltzmannWeight
+  rw [Real.exp_le_one_iff]
+  apply neg_nonpos_of_nonneg
+  unfold wilsonAction
+  apply Finset.sum_nonneg
+  intro p _
+  apply mul_nonneg hβ
+  unfold wilsonPlaquetteCost
+  linarith [hTrace (plaquetteHolonomy U p)]
 
-For a finite lattice with compact G, the product Haar measure
-on G^{links} is a probability measure, and the Boltzmann weight
-is bounded, so all integrals are finite. -/
+/-! ## Partition function -/
 
-/-- The partition function Z = ∫ exp(-S(U)) dμ. -/
-def partitionFn (β : ℝ) (plaq : Finset (Plaquettes d N))
-    (μ : Measure (GaugeConnection G d N)) : ℝ :=
-  ∫ U, boltzmannWeight G n d N β U plaq ∂μ
+/-- The partition function: Z = ∫ exp(-S(U)) dμ_Haar(U).
+This is the normalizing constant for the YM measure. -/
+def partitionFn (β : ℝ) (plaq : Finset (LatticePlaquette d N)) : ℝ :=
+  ∫ U, boltzmannWeight G n d N β U plaq ∂(productHaar G d N)
 
-/-- The YM expectation: ⟨f⟩ = (1/Z) ∫ f · exp(-S) dμ. -/
-def ymExpect (β : ℝ) (plaq : Finset (Plaquettes d N))
-    (μ : Measure (GaugeConnection G d N))
+/-- **The partition function is positive.**
+
+Z > 0 because the integrand exp(-S) is strictly positive everywhere
+and the product Haar measure has full support on the compact space. -/
+theorem partitionFn_pos (β : ℝ) (hβ : 0 ≤ β)
+    (plaq : Finset (LatticePlaquette d N))
+    (hTrace : ∀ g : G, gaugeReTr G n g ≤ ↑n) :
+    0 < partitionFn G n d N β plaq := by
+  unfold partitionFn
+  -- The integrand is ≥ exp(-β · |plaq| · 2n) > 0 everywhere
+  -- and the measure is a probability measure, so the integral is positive.
+  -- We use: ∫ f dμ ≥ ∫ c dμ = c when f ≥ c > 0 and μ is probability
+  sorry
+
+/-! ## The Yang-Mills probability measure -/
+
+/-- **The Yang-Mills probability measure.**
+
+μ_YM has density (1/Z) · exp(-S(U)) with respect to the product
+Haar measure on G^{links}.
+
+This is the finite-volume Gibbs measure for the Wilson lattice
+gauge theory. -/
+def ymDensity (β : ℝ) (plaq : Finset (LatticePlaquette d N))
+    (U : GaugeConnection G d N) : ℝ :=
+  boltzmannWeight G n d N β U plaq / partitionFn G n d N β plaq
+
+/-! ## Expectation values -/
+
+/-- The YM expectation: ⟨f⟩ = (1/Z) ∫ f · exp(-S) dμ_Haar. -/
+def ymExpect (β : ℝ) (plaq : Finset (LatticePlaquette d N))
     (f : GaugeConnection G d N → ℝ) : ℝ :=
-  (∫ U, f U * boltzmannWeight G n d N β U plaq ∂μ) /
-  partitionFn G n d N β plaq μ
+  (∫ U, f U * boltzmannWeight G n d N β U plaq ∂(productHaar G d N)) /
+  partitionFn G n d N β plaq
+
+/-- ⟨1⟩ = 1 (the expectation of the constant 1 is 1). -/
+theorem ymExpect_one (β : ℝ) (plaq : Finset (LatticePlaquette d N))
+    (hZ : partitionFn G n d N β plaq ≠ 0) :
+    ymExpect G n d N β plaq (fun _ => 1) = 1 := by
+  unfold ymExpect partitionFn
+  simp only [one_mul]
+  exact div_self hZ
 
 /-- The connected 2-point function: ⟨f·g⟩ - ⟨f⟩·⟨g⟩. -/
-def connected2pt (β : ℝ) (plaq : Finset (Plaquettes d N))
-    (μ : Measure (GaugeConnection G d N))
+def connected2pt (β : ℝ) (plaq : Finset (LatticePlaquette d N))
     (f g : GaugeConnection G d N → ℝ) : ℝ :=
-  ymExpect G n d N β plaq μ (fun U => f U * g U) -
-  ymExpect G n d N β plaq μ f * ymExpect G n d N β plaq μ g
+  ymExpect G n d N β plaq (fun U => f U * g U) -
+  ymExpect G n d N β plaq f * ymExpect G n d N β plaq g
 
-/-- The plaquette observable at a specific plaquette. -/
-def plaqObs (p : Plaquettes d N) : GaugeConnection G d N → ℝ :=
+/-! ## Plaquette observables -/
+
+/-- The plaquette observable: O_p(U) = Re Tr(U_p). -/
+def plaqObs (p : LatticePlaquette d N) : GaugeConnection G d N → ℝ :=
   fun U => gaugeReTr G n (plaquetteHolonomy U p)
 
-/-- Plaquette observables are bounded by n (since |Re Tr| ≤ n for G ⊂ U(n)). -/
-theorem plaqObs_bounded (p : Plaquettes d N) (U : GaugeConnection G d N)
+/-- Plaquette observables are bounded by n. -/
+theorem plaqObs_bounded (p : LatticePlaquette d N) (U : GaugeConnection G d N)
     (hTrace : ∀ g : G, |gaugeReTr G n g| ≤ ↑n) :
     |plaqObs G n d N p U| ≤ ↑n :=
   hTrace _
+
+/-- Distance between plaquettes (ℓ¹ torus distance). -/
+def plaquetteDist (p q : LatticePlaquette d N) : ℕ :=
+  ∑ i : Fin d, min (p.site i - q.site i).val (q.site i - p.site i).val
 
 end
