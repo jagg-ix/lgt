@@ -21,8 +21,7 @@ The proof uses the Dobrushin uniqueness method:
 - Chatterjee (2026), §16.3 (strong coupling via Dobrushin)
 -/
 
-import LGT.MassGap.DobrushinVerification
-import LGT.MassGap.YMMeasure
+import LGT.MassGap.GaugeFixing
 import LGT.Lattice.CellComplex
 import LGT.GaugeField.Connection
 
@@ -136,11 +135,6 @@ theorem ym_mass_gap_2pt
     (hTrace_lower : ∀ g : G, -↑n ≤ gaugeReTr G n g)
     (hTrace_upper : ∀ g : G, gaugeReTr G n g ≤ ↑n)
     (plaq : Finset (LatticePlaquette d N))
-    (hCorrelationBound : ∀ (f g : GaugeConnection G d N → ℝ)
-        (B : ℝ) (_ : ∀ U, |f U| ≤ B) (_ : ∀ U, |g U| ≤ B)
-        (dist : ℕ),
-        |connected2pt G n d N β plaq f g| ≤
-          4 * B ^ 2 * (dobrushinColumnSum n d β) ^ dist)
     (p q : LatticePlaquette d N) :
     ∃ (m : ℝ), 0 < m ∧
     |connected2pt G n d N β plaq (plaqObs G n d N p) (plaqObs G n d N q)| ≤
@@ -150,7 +144,7 @@ theorem ym_mass_gap_2pt
   refine ⟨m, hm_pos, ?_⟩
   calc |connected2pt G n d N β plaq (plaqObs G n d N p) (plaqObs G n d N q)|
       ≤ 4 * ↑n ^ 2 * (dobrushinColumnSum n d β) ^ plaquetteDist d N p q :=
-        hCorrelationBound _ _ n
+        dobrushin_correlation_bound G n d N β hβ hd hn hβ_small plaq _ _ n
           (fun U => plaqObs_bounded G n d N p U (fun g => abs_le.mpr
             ⟨by linarith [hTrace_lower g], hTrace_upper g⟩))
           (fun U => plaqObs_bounded G n d N q U (fun g => abs_le.mpr

@@ -15,8 +15,7 @@ exponentially with distance:
 - Chatterjee (2026), Theorem 15.7.1
 -/
 
-import LGT.WilsonAction.GaugeInvariance
-import LGT.MassGap.SingleSiteKernel
+import LGT.MassGap.GaugeFixing
 
 open MeasureTheory
 
@@ -57,23 +56,14 @@ theorem mass_gap_2d
     (plaq : Finset (LatticePlaquette d N))
     (hIntegrable : Integrable (fun U => boltzmannWeight G n d N β U plaq)
         (productHaar G d N))
-    -- The correlation bound: gauge fixing + factorization + Doeblin gives
-    -- |connected2pt(f, g)| ≤ 4B² · (1-ε)^dist for B-bounded observables
-    -- at plaquette distance dist. This combines:
-    -- (a) gauge fixing preserves gauge-invariant expectations (Fubini)
-    -- (b) gauge-fixed action factorizes into independent chains
-    -- (c) Doeblin n-step mixing for each chain
-    (hCorrelationBound : ∀ (f g : GaugeConnection G d N → ℝ)
-        (B : ℝ) (hfB : ∀ U, |f U| ≤ B) (hgB : ∀ U, |g U| ≤ B)
-        (dist : ℕ),
-        |connected2pt G n d N β plaq f g| ≤ 4 * B ^ 2 * (1 - ymDoeblinLowerBound n β) ^ dist)
     (p q : LatticePlaquette d N) :
     -- THE MASS GAP: connected 2-point function decays exponentially
     |connected2pt G n d N β plaq (plaqObs G n d N p) (plaqObs G n d N q)| ≤
       4 * (↑n) ^ 2 * Real.exp (-(-Real.log (1 - ymDoeblinLowerBound n β)) *
         ↑(plaquetteDist d N p q)) := by
-  -- Step 1: Apply the correlation bound with B = n and dist = plaquetteDist
-  have hbound := hCorrelationBound (plaqObs G n d N p) (plaqObs G n d N q)
+  -- Step 1: Apply the Doeblin correlation bound with B = n
+  have hbound := doeblin_correlation_bound_2d G n d N β hβ plaq
+    hTrace_lower hTrace_upper (plaqObs G n d N p) (plaqObs G n d N q)
     n (fun U => plaqObs_bounded G n d N p U (fun g => abs_le.mpr
       ⟨by linarith [hTrace_lower g], hTrace_upper g⟩))
     (fun U => plaqObs_bounded G n d N q U (fun g => abs_le.mpr
