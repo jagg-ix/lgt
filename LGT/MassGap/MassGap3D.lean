@@ -43,6 +43,7 @@ directions.
 import LGT.WilsonAction.PlaquetteAction
 import LGT.MassGap.TransferMatrix
 import LGT.MassGap.DoeblinCondition
+import LGT.MassGap.DobrushinVerification
 
 noncomputable section
 
