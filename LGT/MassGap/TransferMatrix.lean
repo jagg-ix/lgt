@@ -172,8 +172,14 @@ theorem ym_satisfies_doeblin (β : ℝ) (hβ : 0 ≤ β)
                     exact integral_mono (hq_integrable V) (integrable_const 1) (fun w => hq_le_one V w)
                 _ = 1 := by simp [IsProbabilityMeasure.measure_univ]
             have hZ_pos : 0 < ∫ W', singleSiteTransitionWeight G n β V W' ∂μ := by
-              exact lt_of_lt_of_le (ymDoeblinLowerBound_pos n β)
-                (integral_ge_const_of_ge (hq_integrable V) (fun w => hq_lower V w hTrace_lower))
+              have hq_lower_int : c ≤ ∫ W', singleSiteTransitionWeight G n β V W' ∂μ := by
+                calc
+                  c = ∫ _ : G, c ∂ μ := by
+                        simp [Measure.real]
+                  _ ≤ ∫ W', singleSiteTransitionWeight G n β V W' ∂μ := by
+                        exact integral_mono (integrable_const c) (hq_integrable V)
+                          (fun w => hq_lower V w hTrace_lower)
+              exact lt_of_lt_of_le (ymDoeblinLowerBound_pos n β) hq_lower_int
             rw [le_div_iff₀ hZ_pos]
             calc c * ∫ W', singleSiteTransitionWeight G n β V W' ∂μ
                 ≤ c * 1 := by exact mul_le_mul_of_nonneg_left hZ_le (le_of_lt (ymDoeblinLowerBound_pos n β))
